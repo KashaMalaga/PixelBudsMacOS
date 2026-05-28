@@ -1,0 +1,139 @@
+/* =========================================================
+   Localizable.strings — English (en)
+   PixelBudsBar
+   ========================================================= */
+
+// MARK: - BudsConnection errors
+"No paired Pixel Buds Pro found" = "No paired Pixel Buds Pro found";
+"RFCOMM channel could not be opened — %@. Another app (e.g. mypixelbuds.google.com in Chrome) may be holding the channel." = "RFCOMM channel could not be opened — %@. Another app (e.g. mypixelbuds.google.com in Chrome) may be holding the channel.";
+"Maestro channel resolution failed: %@" = "Maestro channel resolution failed: %@";
+"Timed out connecting to the buds. Another app may be holding the channel — quit Chrome if mypixelbuds is open." = "Timed out connecting to the buds. Another app may be holding the channel — quit Chrome if mypixelbuds is open.";
+
+// MARK: - BudsViewModel write errors
+"Buds rejected the %@ change. Try again in a moment, or use the touch gesture on a bud." = "Buds rejected the %@ change. Try again in a moment, or use the touch gesture on a bud.";
+"Your buds don't support %@ on this firmware." = "Your buds don't support %@ on this firmware.";
+"Could not set %@: %@" = "Could not set %@: %@";
+"Could not ring buds: %@" = "Could not ring buds: %@";
+
+// MARK: - LowBatteryNotifier
+"Left bud" = "Left bud";
+"Right bud" = "Right bud";
+"Case" = "Case";
+"%@ battery low" = "%@ battery low";
+"%@% remaining — consider charging soon." = "%@% remaining — consider charging soon.";
+
+// MARK: - BudsPopoverView — connection state
+"Idle" = "Idle";
+"Connecting…" = "Connecting…";
+"Connected" = "Connected";
+"Error" = "Error";
+"Couldn't connect" = "Couldn't connect";
+
+// MARK: - BudsPopoverView — battery
+"Left" = "Left";
+"Right" = "Right";
+"in case" = "in case";
+
+// MARK: - BudsPopoverView — ANC / noise control
+"Noise Control" = "Noise Control";
+"Off" = "Off";
+"Active" = "Active";
+"Aware" = "Aware";
+"Adaptive" = "Adaptive";
+
+// MARK: - BudsPopoverView — in-case banner
+"Buds are in the case. Take one out and wear it to change settings." = "Buds are in the case. Take one out and wear it to change settings.";
+
+// MARK: - BudsPopoverView — find menu
+"Ring both" = "Ring both";
+"Ring left only" = "Ring left only";
+"Ring right only" = "Ring right only";
+"Stop ringing" = "Stop ringing";
+"Quit" = "Quit";
+
+// MARK: - SettingsView — tab names
+"General" = "General";
+"Controls" = "Controls";
+"Audio" = "Audio";
+"About" = "About";
+
+// MARK: - SettingsView — General tab
+"Background battery monitoring" = "Background battery monitoring";
+"Keeps the connection alive between popover sessions so the app can notify you when a bud or the case drops below 15%." = "Keeps the connection alive between popover sessions so the app can notify you when a bud or the case drops below 15%.";
+"Launch at login" = "Launch at login";
+"Open popover at launch" = "Open popover at launch";
+"Pops the menu-bar popover every time the app starts so battery and connection are visible at a glance. Turn off for a quiet launch." = "Pops the menu-bar popover every time the app starts so battery and connection are visible at a glance. Turn off for a quiet launch.";
+"Ring buds shortcut" = "Ring buds shortcut";
+"Global hotkey that triggers \"Ring both\" from any app. Click the field and press your combination, or clear it to disable." = "Global hotkey that triggers \"Ring both\" from any app. Click the field and press your combination, or clear it to disable.";
+"Approval required in System Settings." = "Approval required in System Settings.";
+"Open Login Items" = "Open Login Items";
+
+// MARK: - SettingsView — login item subtitle
+"Will start automatically when you log in." = "Will start automatically when you log in.";
+"Registered, but macOS needs you to approve it." = "Registered, but macOS needs you to approve it.";
+"Off — start the app manually." = "Off — start the app manually.";
+"App bundle not found by macOS — try moving it to /Applications." = "App bundle not found by macOS — try moving it to /Applications.";
+
+// MARK: - SettingsView — Controls tab
+"Conversation detection" = "Conversation detection";
+"Switches to Aware mode and pauses media when you start talking." = "Switches to Aware mode and pauses media when you start talking.";
+"In-ear detection" = "In-ear detection";
+"Pause media when an earbud is removed." = "Pause media when an earbud is removed.";
+"Multipoint" = "Multipoint";
+"Stay connected to two Bluetooth devices at once." = "Stay connected to two Bluetooth devices at once.";
+"Touch controls" = "Touch controls";
+"Tap, swipe and hold gestures on the earbud stem." = "Tap, swipe and hold gestures on the earbud stem.";
+"Mono audio" = "Mono audio";
+"Send the same mix to both earbuds so a single bud carries everything." = "Send the same mix to both earbuds so a single bud carries everything.";
+
+// MARK: - SettingsView — Hold Gesture
+"Left earbud" = "Left earbud";
+"Right earbud" = "Right earbud";
+"Noise control" = "Noise control";
+"Digital assistant" = "Digital assistant";
+"Long-press an earbud to trigger this action." = "Long-press an earbud to trigger this action.";
+"Loading hold gesture…" = "Loading hold gesture…";
+
+// MARK: - SettingsView — ANC cycle
+"Cancellation" = "Cancellation";
+"Aware (transparency)" = "Aware (transparency)";
+"Modes the long-press cycles through when hold gesture is set to Noise control." = "Modes the long-press cycles through when hold gesture is set to Noise control.";
+"Loading ANC cycle…" = "Loading ANC cycle…";
+
+// MARK: - SettingsView — About tab / connection states
+"Not connected" = "Not connected";
+"Pixel Buds" = "Pixel Buds";
+"Audio codec" = "Audio codec";
+"Firmware" = "Firmware";
+"Serials" = "Serials";
+"Connection" = "Connection";
+"Loading device info…" = "Loading device info…";
+
+// MARK: - SettingsView — Equalizer
+"Equalizer" = "Equalizer";
+"Low bass" = "Low bass";
+"Bass" = "Bass";
+"Mid" = "Mid";
+"Treble" = "Treble";
+"Upper treble" = "Upper treble";
+"Each band ranges from -6 dB to +6 dB." = "Each band ranges from -6 dB to +6 dB.";
+"Reset to flat" = "Reset to flat";
+"Loading equalizer…" = "Loading equalizer…";
+"Volume EQ" = "Volume EQ";
+"Boost bass automatically at low volume." = "Boost bass automatically at low volume.";
+
+// MARK: - SettingsView — Balance
+"Balance" = "Balance";
+"Bias playback towards one earbud. If L/R seems swapped on your firmware, let me know." = "Bias playback towards one earbud. If L/R seems swapped on your firmware, let me know.";
+"Center" = "Center";
+"Loading balance…" = "Loading balance…";
+"Centered" = "Centered";
+"Left +%d%%" = "Left +%d%%";
+"Right +%d%%" = "Right +%d%%";
+
+
+
+// MARK: - SettingsView — Hearing Health
+"Hearing Health" = "Hearing Health";
+"Loud volume warnings" = "Loud volume warnings";
+"Notifies you after prolonged listening at high volume." = "Notifies you after prolonged listening at high volume.";

@@ -1,0 +1,11 @@
+{
+  "invocations": [
+    {
+      "protoFiles": [
+        "pw.rpc.packet.proto",
+        "maestro_pw.proto"
+      ],
+      "visibility": "public"
+    }
+  ]
+}

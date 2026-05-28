@@ -1,0 +1,139 @@
+/* =========================================================
+   Localizable.strings — 日本語 (ja)
+   PixelBudsBar
+   ========================================================= */
+
+// MARK: - BudsConnection errors
+"No paired Pixel Buds Pro found" = "ペアリング済みの Pixel Buds Pro が見つかりません";
+"RFCOMM channel could not be opened — %@. Another app (e.g. mypixelbuds.google.com in Chrome) may be holding the channel." = "RFCOMMチャンネルを開けませんでした — %@。別のアプリ（例: Chrome の mypixelbuds.google.com）がチャンネルを占有している可能性があります。";
+"Maestro channel resolution failed: %@" = "Maestroチャンネルの解決に失敗しました: %@";
+"Timed out connecting to the buds. Another app may be holding the channel — quit Chrome if mypixelbuds is open." = "イヤバッドへの接続がタイムアウトしました。別のアプリがチャンネルを占有している可能性があります — mypixelbuds が開いている場合は Chrome を終了してください。";
+
+// MARK: - BudsViewModel write errors
+"Buds rejected the %@ change. Try again in a moment, or use the touch gesture on a bud." = "イヤバッドが %@ の変更を拒否しました。少し待ってから再試行するか、イヤバッドのタッチジェスチャーを使用してください。";
+"Your buds don't support %@ on this firmware." = "お使いのイヤバッドはこのファームウェアで %@ をサポートしていません。";
+"Could not set %@: %@" = "%@ を設定できませんでした: %@";
+"Could not ring buds: %@" = "イヤバッドを鳴らせませんでした: %@";
+
+// MARK: - LowBatteryNotifier
+"Left bud" = "左のイヤバッド";
+"Right bud" = "右のイヤバッド";
+"Case" = "ケース";
+"%@ battery low" = "%@ のバッテリー残量が少なくなっています";
+"%@% remaining — consider charging soon." = "残り %@%% — まもなく充電することをお勧めします。";
+
+// MARK: - BudsPopoverView — connection state
+"Idle" = "アイドル";
+"Connecting…" = "接続中…";
+"Connected" = "接続済み";
+"Error" = "エラー";
+"Couldn't connect" = "接続できませんでした";
+
+// MARK: - BudsPopoverView — battery
+"Left" = "左";
+"Right" = "右";
+"in case" = "ケース内";
+
+// MARK: - BudsPopoverView — ANC / noise control
+"Noise Control" = "ノイズコントロール";
+"Off" = "オフ";
+"Active" = "アクティブ";
+"Aware" = "外部音取り込み";
+"Adaptive" = "アダプティブ";
+
+// MARK: - BudsPopoverView — in-case banner
+"Buds are in the case. Take one out and wear it to change settings." = "イヤバッドはケースに入っています。設定を変更するには、一方を取り出して装着してください。";
+
+// MARK: - BudsPopoverView — find menu
+"Ring both" = "両方を鳴らす";
+"Ring left only" = "左のみ鳴らす";
+"Ring right only" = "右のみ鳴らす";
+"Stop ringing" = "鳴動を停止";
+"Quit" = "終了";
+
+// MARK: - SettingsView — tab names
+"General" = "一般";
+"Controls" = "操作";
+"Audio" = "オーディオ";
+"About" = "情報";
+
+// MARK: - SettingsView — General tab
+"Background battery monitoring" = "バックグラウンドバッテリー監視";
+"Keeps the connection alive between popover sessions so the app can notify you when a bud or the case drops below 15%." = "ポップオーバーセッション間も接続を維持し、イヤバッドやケースのバッテリーが15%%を下回るとアプリが通知します。";
+"Launch at login" = "ログイン時に起動";
+"Open popover at launch" = "起動時にポップオーバーを開く";
+"Pops the menu-bar popover every time the app starts so battery and connection are visible at a glance. Turn off for a quiet launch." = "アプリ起動ごとにメニューバーのポップオーバーを表示し、バッテリーと接続状態をひと目で確認できます。静かに起動するにはオフにしてください。";
+"Ring buds shortcut" = "イヤバッドを鳴らすショートカット";
+"Global hotkey that triggers \"Ring both\" from any app. Click the field and press your combination, or clear it to disable." = "どのアプリからでも「両方を鳴らす」を起動するグローバルホットキーです。フィールドをクリックして組み合わせを押すか、クリアして無効にしてください。";
+"Approval required in System Settings." = "システム設定で承認が必要です。";
+"Open Login Items" = "ログイン項目を開く";
+
+// MARK: - SettingsView — login item subtitle
+"Will start automatically when you log in." = "ログイン時に自動的に起動します。";
+"Registered, but macOS needs you to approve it." = "登録済みですが、macOS の承認が必要です。";
+"Off — start the app manually." = "オフ — アプリを手動で起動してください。";
+"App bundle not found by macOS — try moving it to /Applications." = "macOS がアプリバンドルを見つけられません — /Applications に移動してみてください。";
+
+// MARK: - SettingsView — Controls tab
+"Conversation detection" = "会話検出";
+"Switches to Aware mode and pauses media when you start talking." = "話し始めると外部音取り込みモードに切り替わり、メディアを一時停止します。";
+"In-ear detection" = "装着検出";
+"Pause media when an earbud is removed." = "イヤバッドを外すとメディアを一時停止します。";
+"Multipoint" = "マルチポイント";
+"Stay connected to two Bluetooth devices at once." = "2台の Bluetooth デバイスに同時接続し続けます。";
+"Touch controls" = "タッチ操作";
+"Tap, swipe and hold gestures on the earbud stem." = "イヤバッドのステムでタップ、スワイプ、長押しのジェスチャーが使えます。";
+"Mono audio" = "モノラルオーディオ";
+"Send the same mix to both earbuds so a single bud carries everything." = "両方のイヤバッドに同じミックスを送るため、一方だけでも完全なオーディオが聴けます。";
+
+// MARK: - SettingsView — Hold Gesture
+"Left earbud" = "左のイヤバッド";
+"Right earbud" = "右のイヤバッド";
+"Noise control" = "ノイズコントロール";
+"Digital assistant" = "デジタルアシスタント";
+"Long-press an earbud to trigger this action." = "イヤバッドを長押しするとこのアクションが実行されます。";
+"Loading hold gesture…" = "長押しジェスチャーを読み込み中…";
+
+// MARK: - SettingsView — ANC cycle
+"Cancellation" = "ノイズキャンセリング";
+"Aware (transparency)" = "外部音取り込み";
+"Modes the long-press cycles through when hold gesture is set to Noise control." = "長押しジェスチャーがノイズコントロールに設定されているときに切り替わるモード。";
+"Loading ANC cycle…" = "ANCサイクルを読み込み中…";
+
+// MARK: - SettingsView — About tab / connection states
+"Not connected" = "未接続";
+"Pixel Buds" = "Pixel Buds";
+"Audio codec" = "オーディオコーデック";
+"Firmware" = "ファームウェア";
+"Serials" = "シリアル番号";
+"Connection" = "接続";
+"Loading device info…" = "デバイス情報を読み込み中…";
+
+// MARK: - SettingsView — Equalizer
+"Equalizer" = "イコライザー";
+"Low bass" = "ローバス";
+"Bass" = "バス";
+"Mid" = "ミッド";
+"Treble" = "トレブル";
+"Upper treble" = "アッパートレブル";
+"Each band ranges from -6 dB to +6 dB." = "各バンドの範囲は -6 dB ～ +6 dB です。";
+"Reset to flat" = "フラットにリセット";
+"Loading equalizer…" = "イコライザーを読み込み中…";
+"Volume EQ" = "ボリュームEQ";
+"Boost bass automatically at low volume." = "低音量時にバスを自動的に強調します。";
+
+// MARK: - SettingsView — Balance
+"Balance" = "バランス";
+"Bias playback towards one earbud. If L/R seems swapped on your firmware, let me know." = "一方のイヤバッドに再生を寄せます。ファームウェアで L/R が逆に見える場合はお知らせください。";
+"Center" = "センター";
+"Loading balance…" = "バランスを読み込み中…";
+"Centered" = "中央";
+"Left +%d%%" = "左 +%d%%";
+"Right +%d%%" = "右 +%d%%";
+
+
+
+// MARK: - SettingsView — Hearing Health
+"Hearing Health" = "聴覚の健康";
+"Loud volume warnings" = "音量過大警告";
+"Notifies you after prolonged listening at high volume." = "大音量で長時間聴き続けると通知します。";

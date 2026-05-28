@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleDisplayName</key>
+    <string>Pixel Buds Bar</string>
+    <key>CFBundleExecutable</key>
+    <string>PixelBudsBar</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.kshmlg.PixelBudsBar</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>PixelBudsBar</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>PixelBudsBar talks to your Pixel Buds Pro over Bluetooth to read battery levels and control noise cancellation.</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>MIT</string>
+    <!-- Sparkle auto-update feed. Point to the appcast.xml uploaded to GitHub Releases. -->
+    <key>SUFeedURL</key>
+    <string>https://github.com/kashaMalaga/PixelBudsMacOS/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>UKfMv/UCU2q9WmqFUHkdVp+ULR5xUXBbjujS1h5+Ogs=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+</dict>
+</plist>

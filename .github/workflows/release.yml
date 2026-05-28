@@ -1,0 +1,110 @@
+name: Release
+
+# Triggers on version tags: git tag v1.0.0 && git push --tags
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: macos-14          # Apple Silicon runner; Xcode 15+ pre-installed
+    permissions:
+      contents: write          # needed to create the GitHub Release
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────────
+      - uses: actions/checkout@v4
+
+      # ── Install Developer ID certificate into a temporary keychain ──────────
+      - name: Install signing certificate
+        env:
+          CERTIFICATE_P12:       ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD:  ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD:     ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          echo "$CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+      # ── Extract version from the tag (strips leading 'v') ───────────────────
+      - name: Set version
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      # ── Patch CFBundleShortVersionString in Info.plist ───────────────────────
+      - name: Patch version in Info.plist
+        run: |
+          /usr/libexec/PlistBuddy \
+            -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.VERSION }}" \
+            Resources/PixelBudsBar/Info.plist
+          /usr/libexec/PlistBuddy \
+            -c "Set :CFBundleVersion ${{ github.run_number }}" \
+            Resources/PixelBudsBar/Info.plist
+
+      # ── Build, sign, DMG, notarize ───────────────────────────────────────────
+      - name: Build, sign and notarize
+        env:
+          CODESIGN_IDENTITY:   ${{ secrets.CODESIGN_IDENTITY }}
+          NOTARIZE_APPLE_ID:   ${{ secrets.NOTARIZE_APPLE_ID }}
+          NOTARIZE_TEAM_ID:    ${{ secrets.NOTARIZE_TEAM_ID }}
+          NOTARIZE_PASSWORD:   ${{ secrets.NOTARIZE_PASSWORD }}
+        run: ./Scripts/build-app.sh --release
+
+      # ── Generate Sparkle appcast ─────────────────────────────────────────────
+      # generate_appcast signs the DMG with the EdDSA private key and writes
+      # appcast.xml next to it. The key is stored as a plain-text GitHub Secret.
+      - name: Generate appcast.xml
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          # Find generate_appcast from the resolved Sparkle package
+          SPARKLE_XCFW="$(find .build/artifacts -name "Sparkle.xcframework" | head -1)"
+          GEN_APPCAST="$(find "$SPARKLE_XCFW" -name "generate_appcast" | head -1)"
+          if [[ -z "$GEN_APPCAST" ]]; then
+            echo "✗ generate_appcast not found in Sparkle XCFramework" && exit 1
+          fi
+
+          # Write the private key to a temp file
+          KEY_FILE="$(mktemp)"
+          echo "$SPARKLE_PRIVATE_KEY" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+
+          "$GEN_APPCAST" \
+            --ed-key-file "$KEY_FILE" \
+            --link "https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}" \
+            --download-url-prefix "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/" \
+            build/
+
+          rm -f "$KEY_FILE"
+
+      # ── Create GitHub Release and upload assets ──────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Pixel Buds Bar ${{ steps.version.outputs.VERSION }}"
+          body: |
+            ## What's new
+            <!-- Fill in release notes here, or automate with a CHANGELOG -->
+
+            ## Installation
+            1. Download **PixelBudsBar.dmg** below.
+            2. Open the DMG, drag **Pixel Buds Bar** to Applications.
+            3. Launch it — the earbuds icon appears in your menu bar.
+
+            **Requires macOS 14 Sonoma or later.**
+          files: |
+            build/PixelBudsBar.dmg
+            build/appcast.xml

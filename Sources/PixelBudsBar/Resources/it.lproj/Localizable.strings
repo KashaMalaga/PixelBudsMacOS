@@ -1,0 +1,139 @@
+/* =========================================================
+   Localizable.strings — Italiano (it)
+   PixelBudsBar
+   ========================================================= */
+
+// MARK: - BudsConnection errors
+"No paired Pixel Buds Pro found" = "Nessun Pixel Buds Pro abbinato trovato";
+"RFCOMM channel could not be opened — %@. Another app (e.g. mypixelbuds.google.com in Chrome) may be holding the channel." = "Impossibile aprire il canale RFCOMM — %@. Un'altra app (es. mypixelbuds.google.com in Chrome) potrebbe occupare il canale.";
+"Maestro channel resolution failed: %@" = "Risoluzione del canale Maestro non riuscita: %@";
+"Timed out connecting to the buds. Another app may be holding the channel — quit Chrome if mypixelbuds is open." = "Timeout durante la connessione agli auricolari. Un'altra app potrebbe occupare il canale — chiudi Chrome se mypixelbuds è aperto.";
+
+// MARK: - BudsViewModel write errors
+"Buds rejected the %@ change. Try again in a moment, or use the touch gesture on a bud." = "Gli auricolari hanno rifiutato la modifica %@. Riprova tra un momento o usa il gesto touch su un auricolare.";
+"Your buds don't support %@ on this firmware." = "I tuoi auricolari non supportano %@ con questo firmware.";
+"Could not set %@: %@" = "Impossibile impostare %@: %@";
+"Could not ring buds: %@" = "Impossibile far suonare gli auricolari: %@";
+
+// MARK: - LowBatteryNotifier
+"Left bud" = "Auricolare sinistro";
+"Right bud" = "Auricolare destro";
+"Case" = "Custodia";
+"%@ battery low" = "Batteria scarica: %@";
+"%@% remaining — consider charging soon." = "%@%% rimanente — considera di ricaricare presto.";
+
+// MARK: - BudsPopoverView — connection state
+"Idle" = "Inattivo";
+"Connecting…" = "Connessione…";
+"Connected" = "Connesso";
+"Error" = "Errore";
+"Couldn't connect" = "Impossibile connettersi";
+
+// MARK: - BudsPopoverView — battery
+"Left" = "Sinistra";
+"Right" = "Destra";
+"in case" = "nella custodia";
+
+// MARK: - BudsPopoverView — ANC / noise control
+"Noise Control" = "Controllo rumore";
+"Off" = "Disattivo";
+"Active" = "Attivo";
+"Aware" = "Trasparenza";
+"Adaptive" = "Adattivo";
+
+// MARK: - BudsPopoverView — in-case banner
+"Buds are in the case. Take one out and wear it to change settings." = "Gli auricolari sono nella custodia. Tirarne uno fuori e indossarlo per modificare le impostazioni.";
+
+// MARK: - BudsPopoverView — find menu
+"Ring both" = "Fai suonare entrambi";
+"Ring left only" = "Solo sinistro";
+"Ring right only" = "Solo destro";
+"Stop ringing" = "Interrompi suono";
+"Quit" = "Esci";
+
+// MARK: - SettingsView — tab names
+"General" = "Generali";
+"Controls" = "Controlli";
+"Audio" = "Audio";
+"About" = "Info";
+
+// MARK: - SettingsView — General tab
+"Background battery monitoring" = "Monitoraggio batteria in background";
+"Keeps the connection alive between popover sessions so the app can notify you when a bud or the case drops below 15%." = "Mantiene la connessione attiva tra le sessioni del pannello per notificarti quando un auricolare o la custodia scende sotto il 15 %%.";
+"Launch at login" = "Avvia all'accesso";
+"Open popover at launch" = "Apri pannello all'avvio";
+"Pops the menu-bar popover every time the app starts so battery and connection are visible at a glance. Turn off for a quiet launch." = "Mostra il pannello della barra dei menu a ogni avvio per vedere batteria e connessione a colpo d'occhio. Disattiva per un avvio silenzioso.";
+"Ring buds shortcut" = "Scorciatoia per far suonare";
+"Global hotkey that triggers \"Ring both\" from any app. Click the field and press your combination, or clear it to disable." = "Scorciatoia globale che attiva «Fai suonare entrambi» da qualsiasi app. Fai clic nel campo e premi la tua combinazione, o cancellala per disabilitarla.";
+"Approval required in System Settings." = "Approvazione richiesta in Impostazioni di Sistema.";
+"Open Login Items" = "Apri Elementi di accesso";
+
+// MARK: - SettingsView — login item subtitle
+"Will start automatically when you log in." = "Si avvierà automaticamente all'accesso.";
+"Registered, but macOS needs you to approve it." = "Registrato, ma macOS richiede la tua approvazione.";
+"Off — start the app manually." = "Disattivo — avvia l'app manualmente.";
+"App bundle not found by macOS — try moving it to /Applications." = "Bundle dell'app non trovato da macOS — prova a spostarlo in /Applications.";
+
+// MARK: - SettingsView — Controls tab
+"Conversation detection" = "Rilevamento conversazione";
+"Switches to Aware mode and pauses media when you start talking." = "Passa alla modalità Trasparenza e mette in pausa i media quando inizi a parlare.";
+"In-ear detection" = "Rilevamento in-ear";
+"Pause media when an earbud is removed." = "Mette in pausa i media quando si rimuove un auricolare.";
+"Multipoint" = "Multipoint";
+"Stay connected to two Bluetooth devices at once." = "Rimani connesso a due dispositivi Bluetooth contemporaneamente.";
+"Touch controls" = "Controlli touch";
+"Tap, swipe and hold gestures on the earbud stem." = "Gesti di tocco, scorrimento e pressione prolungata sul gambo dell'auricolare.";
+"Mono audio" = "Audio mono";
+"Send the same mix to both earbuds so a single bud carries everything." = "Invia lo stesso mix a entrambi gli auricolari così che uno solo basti.";
+
+// MARK: - SettingsView — Hold Gesture
+"Left earbud" = "Auricolare sinistro";
+"Right earbud" = "Auricolare destro";
+"Noise control" = "Controllo rumore";
+"Digital assistant" = "Assistente digitale";
+"Long-press an earbud to trigger this action." = "Tieni premuto un auricolare per attivare questa azione.";
+"Loading hold gesture…" = "Caricamento gesto pressione prolungata…";
+
+// MARK: - SettingsView — ANC cycle
+"Cancellation" = "Riduzione rumore";
+"Aware (transparency)" = "Trasparenza";
+"Modes the long-press cycles through when hold gesture is set to Noise control." = "Modalità tra cui il gesto di pressione prolungata alterna quando impostato su Controllo rumore.";
+"Loading ANC cycle…" = "Caricamento ciclo ANC…";
+
+// MARK: - SettingsView — About tab / connection states
+"Not connected" = "Non connesso";
+"Pixel Buds" = "Pixel Buds";
+"Audio codec" = "Codec audio";
+"Firmware" = "Firmware";
+"Serials" = "Numeri di serie";
+"Connection" = "Connessione";
+"Loading device info…" = "Caricamento informazioni dispositivo…";
+
+// MARK: - SettingsView — Equalizer
+"Equalizer" = "Equalizzatore";
+"Low bass" = "Bassi profondi";
+"Bass" = "Bassi";
+"Mid" = "Medi";
+"Treble" = "Acuti";
+"Upper treble" = "Acuti alti";
+"Each band ranges from -6 dB to +6 dB." = "Ogni banda va da -6 dB a +6 dB.";
+"Reset to flat" = "Ripristina a piatto";
+"Loading equalizer…" = "Caricamento equalizzatore…";
+"Volume EQ" = "EQ volume";
+"Boost bass automatically at low volume." = "Amplifica automaticamente i bassi a basso volume.";
+
+// MARK: - SettingsView — Balance
+"Balance" = "Bilanciamento";
+"Bias playback towards one earbud. If L/R seems swapped on your firmware, let me know." = "Orienta la riproduzione verso un auricolare. Se L/D sembra invertito nel tuo firmware, fammelo sapere.";
+"Center" = "Centra";
+"Loading balance…" = "Caricamento bilanciamento…";
+"Centered" = "Centrato";
+"Left +%d%%" = "Sinistra +%d%%";
+"Right +%d%%" = "Destra +%d%%";
+
+
+
+// MARK: - SettingsView — Hearing Health
+"Hearing Health" = "Salute uditiva";
+"Loud volume warnings" = "Avvisi volume alto";
+"Notifies you after prolonged listening at high volume." = "Ti avvisa dopo aver ascoltato a volume alto per un tempo prolungato.";
