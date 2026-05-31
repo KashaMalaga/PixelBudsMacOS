@@ -2,7 +2,8 @@
 # Build PixelBudsBar.app and (optionally) a notarized .dmg ready for distribution.
 #
 # Usage:
-#   ./Scripts/build-app.sh [--release]
+#   ./Scripts/build-app.sh          # release build (default)
+#   ./Scripts/build-app.sh --debug  # debug build for local development
 #
 # Environment variables (all optional; omitting them gives a local/ad-hoc build):
 #   CODESIGN_IDENTITY   Developer ID Application identity string,
@@ -19,8 +20,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
 
-CONFIG="debug"
-[[ "${1:-}" == "--release" ]] && CONFIG="release"
+CONFIG="release"
+[[ "${1:-}" == "--debug" ]] && CONFIG="debug"
 
 IDENTITY="${CODESIGN_IDENTITY:-}"
 ENTITLEMENTS="$ROOT/Resources/PixelBudsBar/PixelBudsBar.entitlements"
@@ -42,6 +43,21 @@ mkdir -p "$APP_DIR/Contents/Resources"
 mkdir -p "$APP_DIR/Contents/Frameworks"
 
 cp "$BIN_PATH" "$APP_DIR/Contents/MacOS/PixelBudsBar"
+
+# Copy the SPM resource bundle (holds localisation strings and other target
+# resources). SPM places it next to the binary in the build output directory;
+# Bundle.main looks for it inside Contents/Resources/ at runtime.
+BIN_DIR="$(dirname "$BIN_PATH")"
+RESOURCE_BUNDLE="$BIN_DIR/PixelBudsMacOS_PixelBudsBar.bundle"
+if [[ -d "$RESOURCE_BUNDLE" ]]; then
+    echo "→ Copying SPM resource bundle…"
+    # The generated resource_bundle_accessor.swift resolves the bundle as:
+    #   Bundle.main.bundleURL + "PixelBudsMacOS_PixelBudsBar.bundle"
+    # That resolves to the .app root, NOT Contents/Resources/ — so copy it there.
+    cp -R "$RESOURCE_BUNDLE" "$APP_DIR/"
+else
+    echo "  ⚠ SPM resource bundle not found at $RESOURCE_BUNDLE — localisations may be missing"
+fi
 # SwiftPM doesn't add the @executable_path/../Frameworks rpath that an embedded
 # Sparkle.framework needs. Patch it into the binary now, before signing.
 install_name_tool -add_rpath "@executable_path/../Frameworks" \
