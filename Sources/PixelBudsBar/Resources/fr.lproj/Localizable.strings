@@ -50,6 +50,7 @@
 "Ring right only" = "Uniquement le droit";
 "Stop ringing" = "Arrêter la sonnerie";
 "Quit" = "Quitter";
+"Reconnect" = "Reconnecter";
 
 // MARK: - SettingsView — tab names
 "General" = "Général";

@@ -47,6 +47,9 @@ public final class RFCOMMTransportAdapter: NSObject, IOBluetoothRFCOMMChannelDel
     private let inboundContinuation: AsyncStream<Data>.Continuation
     private let inboundStream: AsyncStream<Data>
     private var openContinuation: CheckedContinuation<Void, Error>?
+    /// Guards `openContinuation` so the open-complete delegate, the timeout
+    /// child, and a cancellation handler can't double-resume or leak it.
+    private let openLock = NSLock()
     private var closeContinuation: CheckedContinuation<Void, Never>?
     /// Dedicated serial queue so concurrent send() invocations from the actor
     /// don't race writeSync (IOBluetoothRFCOMMChannel is not thread-safe).
@@ -67,12 +70,32 @@ public final class RFCOMMTransportAdapter: NSObject, IOBluetoothRFCOMMChannelDel
     public func open(
         on device: IOBluetoothDevice,
         timeout seconds: TimeInterval = 10.0,
-        serviceUUID: [UInt8] = maestroUUIDBytes
+        serviceUUID: [UInt8] = maestroUUIDBytes,
+        refreshSDPIfMissing: Bool = true
     ) async throws {
         let sdpUUID = serviceUUID.withUnsafeBufferPointer { ptr in
             IOBluetoothSDPUUID(bytes: ptr.baseAddress!, length: ptr.count)
         }
-        guard let record = device.getServiceRecord(for: sdpUUID) else {
+        var record = device.getServiceRecord(for: sdpUUID)
+        if record == nil, refreshSDPIfMissing {
+            // The SDP cache can be momentarily empty right after the device
+            // (re)connects — notably during a multipoint handoff back from the
+            // phone, where the buds re-advertise their services a beat after the
+            // ACL link comes up. Rather than failing the whole connect attempt
+            // on this transient miss, force a fresh SDP query and poll briefly.
+            log.info("open: SDP record missing — forcing SDP refresh and polling")
+            _ = device.performSDPQuery(nil)
+            for _ in 0..<12 {   // up to ~3s
+                try await Task.sleep(nanoseconds: 250_000_000)
+                try Task.checkCancellation()
+                if let r = device.getServiceRecord(for: sdpUUID) {
+                    log.info("open: SDP record appeared after refresh")
+                    record = r
+                    break
+                }
+            }
+        }
+        guard let record else {
             log.error("open: no SDP record for service UUID")
             throw RFCOMMOpenError.noServiceRecord
         }
@@ -101,19 +124,56 @@ public final class RFCOMMTransportAdapter: NSObject, IOBluetoothRFCOMMChannelDel
         }
         self.channel = ch
 
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask {
-                try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-                    self.openContinuation = cont
+        do {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    // Cancellation-safe wait: if this task is cancelled (e.g. a
+                    // forced reconnect tears the session down mid-open), the
+                    // handler resumes the continuation so the task group can
+                    // actually finish. Without this, the continuation would
+                    // never resume and `withThrowingTaskGroup` would block
+                    // forever waiting on this child — deadlocking teardown.
+                    try await withTaskCancellationHandler {
+                        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+                            self.openLock.lock()
+                            if Task.isCancelled {
+                                self.openLock.unlock()
+                                cont.resume(throwing: CancellationError())
+                                return
+                            }
+                            self.openContinuation = cont
+                            self.openLock.unlock()
+                        }
+                    } onCancel: {
+                        self.resolveOpen(.failure(CancellationError()))
+                    }
                 }
+                group.addTask {
+                    try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                    throw RFCOMMOpenError.openCompleteFailed(kIOReturnTimeout)
+                }
+                defer { group.cancelAll() }
+                try await group.next()
             }
-            group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                throw RFCOMMOpenError.openCompleteFailed(kIOReturnTimeout)
-            }
-            defer { group.cancelAll() }
-            try await group.next()
+        } catch {
+            // We created the channel object but never completed the handshake
+            // (timeout or cancellation). Release it so IOBluetooth doesn't keep
+            // a half-open channel around for the next open to collide with.
+            ch.close()
+            self.channel = nil
+            throw error
         }
+    }
+
+    /// Resolve the pending open continuation exactly once. Safe to call from
+    /// the open-complete delegate, the channel-closed delegate, and the
+    /// cancellation handler concurrently — the lock guarantees a single resume.
+    private func resolveOpen(_ result: Result<Void, Error>) {
+        openLock.lock()
+        let cont = openContinuation
+        openContinuation = nil
+        openLock.unlock()
+        cont?.resume(with: result)
     }
 
     /// Closes the underlying RFCOMM channel and waits for IOBluetooth to
@@ -158,35 +218,81 @@ public final class RFCOMMTransportAdapter: NSObject, IOBluetoothRFCOMMChannelDel
         return MaestroTransport(send: writer, inbound: stream)
     }
 
+    /// Upper bound on a single `write`. `writeSync` is a blocking IOBluetooth
+    /// call that has been observed to hang for >60s when the RFCOMM link goes
+    /// half-dead (multipoint focus moving to the phone: the channel still
+    /// reports "open" but writes never drain). Normal writes complete in well
+    /// under 100ms, so this only ever trips on a wedged link.
+    private static let writeTimeout: TimeInterval = 5.0
+
     private func write(_ data: Data) async throws {
         guard let channel = self.channel else {
             throw RFCOMMOpenError.channelLost
         }
         let mtu = Int(channel.getMTU())
         let chunkSize = mtu > 0 ? mtu : 512
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            writeQueue.async { [channel] in
-                var offset = 0
-                while offset < data.count {
-                    let end = min(offset + chunkSize, data.count)
-                    let slice = data[offset..<end]
-                    let r: IOReturn = slice.withUnsafeBytes { raw -> IOReturn in
-                        guard let base = raw.baseAddress else { return kIOReturnInternalError }
-                        let mutable = UnsafeMutableRawPointer(mutating: base)
-                        return channel.writeSync(mutable, length: UInt16(slice.count))
-                    }
-                    if r != kIOReturnSuccess {
-                        log.error("writeSync failed: \(ioReturnString(r), privacy: .public) offset=\(offset) chunkSize=\(slice.count)")
-                        cont.resume(throwing: NSError(
-                            domain: "RFCOMMTransport", code: Int(r),
-                            userInfo: [NSLocalizedDescriptionKey: "writeSync failed: \(ioReturnString(r))"]
-                        ))
-                        return
-                    }
-                    offset = end
-                }
-                cont.resume()
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask { [weak self] in
+                guard let self else { throw RFCOMMOpenError.channelLost }
+                try await self.rawWrite(data, on: channel, chunkSize: chunkSize)
             }
+            group.addTask { [weak self] in
+                try await Task.sleep(nanoseconds: UInt64(Self.writeTimeout * 1_000_000_000))
+                // The write is wedged on a half-dead link. Closing the channel
+                // aborts the stuck `writeSync` and tears the session down so the
+                // session driver reconnects on a fresh channel — the same
+                // recovery a manual Reconnect performs, but automatic.
+                log.error("write: timed out after \(Self.writeTimeout, format: .fixed(precision: 0))s — link wedged, closing channel")
+                await self?.close()
+                throw NSError(
+                    domain: "RFCOMMTransport", code: Int(kIOReturnTimeout),
+                    userInfo: [NSLocalizedDescriptionKey: "RFCOMM write timed out — link wedged"]
+                )
+            }
+            defer { group.cancelAll() }
+            try await group.next()
+        }
+    }
+
+    /// One cancellation-aware chunked write. The continuation resumes when
+    /// `writeSync` finishes on the write queue, OR immediately if the task is
+    /// cancelled — so a cancelled/timed-out write can't leave a parent task
+    /// group hanging on a `writeSync` that may block for a very long time.
+    private func rawWrite(
+        _ data: Data,
+        on channel: IOBluetoothRFCOMMChannel,
+        chunkSize: Int
+    ) async throws {
+        let box = WriteContinuationBox()
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+                box.store(cont)
+                writeQueue.async { [channel] in
+                    var offset = 0
+                    while offset < data.count {
+                        let end = min(offset + chunkSize, data.count)
+                        let slice = data[offset..<end]
+                        let r: IOReturn = slice.withUnsafeBytes { raw -> IOReturn in
+                            guard let base = raw.baseAddress else { return kIOReturnInternalError }
+                            let mutable = UnsafeMutableRawPointer(mutating: base)
+                            return channel.writeSync(mutable, length: UInt16(slice.count))
+                        }
+                        if r != kIOReturnSuccess {
+                            log.error("writeSync failed: \(ioReturnString(r), privacy: .public) offset=\(offset) chunkSize=\(slice.count)")
+                            box.resume(.failure(NSError(
+                                domain: "RFCOMMTransport", code: Int(r),
+                                userInfo: [NSLocalizedDescriptionKey: "writeSync failed: \(ioReturnString(r))"]
+                            )))
+                            return
+                        }
+                        offset = end
+                    }
+                    box.resume(.success(()))
+                }
+            }
+        } onCancel: {
+            box.resume(.failure(CancellationError()))
         }
     }
 
@@ -196,15 +302,12 @@ public final class RFCOMMTransportAdapter: NSObject, IOBluetoothRFCOMMChannelDel
         _ rfcommChannel: IOBluetoothRFCOMMChannel!,
         status error: IOReturn
     ) {
-        let cont = openContinuation
-        openContinuation = nil
-        guard let cont else { return }
         if error == kIOReturnSuccess {
             log.info("rfcommChannelOpenComplete: ok")
-            cont.resume()
+            resolveOpen(.success(()))
         } else {
             log.error("rfcommChannelOpenComplete: \(ioReturnString(error), privacy: .public)")
-            cont.resume(throwing: RFCOMMOpenError.openCompleteFailed(error))
+            resolveOpen(.failure(RFCOMMOpenError.openCompleteFailed(error)))
         }
     }
 
@@ -222,6 +325,9 @@ public final class RFCOMMTransportAdapter: NSObject, IOBluetoothRFCOMMChannelDel
         // `.channelLost` instead of hitting writeSync on a dead handle
         // (IOBluetooth returns 0xE00002CD / kIOReturnNotOpen in that case).
         channel = nil
+        // If the channel closed while an open was still in flight, unblock the
+        // opener instead of letting it wait out the full timeout.
+        resolveOpen(.failure(RFCOMMOpenError.channelLost))
         inboundContinuation.finish()
         resolveCloseIfPending()
     }
@@ -234,4 +340,45 @@ public final class RFCOMMTransportAdapter: NSObject, IOBluetoothRFCOMMChannelDel
         status error: IOReturn
     ) {}
     public func rfcommChannelQueueSpaceAvailable(_ rfcommChannel: IOBluetoothRFCOMMChannel!) {}
+}
+
+/// Thread-safe one-shot box for a write continuation. The write-queue callback
+/// (writeSync finished) and the cancellation handler can race; the lock makes
+/// sure the continuation is resumed exactly once, and storing it after a
+/// cancellation has already fired resumes it immediately.
+private final class WriteContinuationBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cont: CheckedContinuation<Void, Error>?
+    private var pending: Result<Void, Error>?
+    private var done = false
+
+    func store(_ c: CheckedContinuation<Void, Error>) {
+        lock.lock()
+        if done { lock.unlock(); return }
+        if let pending {
+            self.pending = nil
+            done = true
+            lock.unlock()
+            c.resume(with: pending)
+            return
+        }
+        cont = c
+        lock.unlock()
+    }
+
+    func resume(_ result: Result<Void, Error>) {
+        lock.lock()
+        if done { lock.unlock(); return }
+        if let c = cont {
+            cont = nil
+            done = true
+            lock.unlock()
+            c.resume(with: result)
+        } else {
+            // Cancelled/finished before the continuation was stored — stash the
+            // result so `store` resumes immediately when it arrives.
+            pending = result
+            lock.unlock()
+        }
+    }
 }

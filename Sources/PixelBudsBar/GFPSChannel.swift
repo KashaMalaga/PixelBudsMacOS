@@ -67,7 +67,12 @@ final class GFPSChannel {
     static func open(on device: IOBluetoothDevice, timeout: TimeInterval = 5.0) async -> GFPSChannel? {
         let adapter = RFCOMMTransportAdapter()
         do {
-            try await adapter.open(on: device, timeout: timeout, serviceUUID: gfpsUUIDBytes)
+            // GFPS is optional (only Ring depends on it), so fail fast on a
+            // missing SDP record instead of spending the Maestro-style refresh
+            // budget — a brief SDP poll here would just delay the whole connect.
+            try await adapter.open(on: device, timeout: timeout,
+                                   serviceUUID: gfpsUUIDBytes,
+                                   refreshSDPIfMissing: false)
             return GFPSChannel(adapter: adapter)
         } catch {
             // Either no SDP record or the channel refused — that's fine,

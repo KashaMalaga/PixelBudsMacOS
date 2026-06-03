@@ -114,7 +114,7 @@ struct BudsPopoverView: View {
     }
 
     private func errorView(_ message: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             Label("Couldn't connect", systemImage: "exclamationmark.triangle")
                 .font(.subheadline)
                 .foregroundStyle(.orange)
@@ -122,6 +122,13 @@ struct BudsPopoverView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            Button {
+                model.forceReconnect()
+            } label: {
+                Label(String(localized: "Reconnect", comment: "Reconnect button"),
+                      systemImage: "arrow.clockwise")
+            }
+            .controlSize(.small)
         }
     }
 
@@ -208,6 +215,14 @@ struct BudsPopoverView: View {
             if model.snapshot?.canRingBuds == true {
                 findMenu
             }
+            Button {
+                model.forceReconnect()
+            } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .buttonStyle(.borderless)
+            .controlSize(.small)
+            .help("Reconnect")
             Button {
                 NotificationCenter.default.post(name: .openPixelBudsSettings, object: nil)
             } label: {

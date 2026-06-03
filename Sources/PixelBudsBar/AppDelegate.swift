@@ -1,8 +1,12 @@
 import AppKit
 import Combine
+import IOBluetooth
 import KeyboardShortcuts
 import MaestroIOBluetooth
+import OSLog
 import SwiftUI
+
+private let log = Logger(subsystem: "com.kshmlg.PixelBudsBar", category: "bt-watch")
 
 extension Notification.Name {
     /// Posted by the popover (or anywhere else in the UI) to ask the
@@ -29,6 +33,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private let popover = NSPopover()
     private var cancellables: Set<AnyCancellable> = []
 
+    /// Retains the IOBluetooth baseband-connect subscription. When the buds
+    /// re-establish their ACL link (e.g. multipoint focus handed back from the
+    /// phone), this fires and we rebuild the Maestro session immediately
+    /// instead of waiting on the blind backoff loop in BudsViewModel.
+    private var budsConnectNotification: IOBluetoothUserNotification?
+
     /// Settings window is created lazily on first open and reused afterwards.
     private var settingsWindow: NSWindow?
     /// True while the settings window has acquired the model's connection.
@@ -52,6 +62,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // a long-lived connection slot now so battery alerts work without
         // requiring the popover to be open.
         model.bootstrapBackgroundMonitoring()
+
+        observeBluetoothReconnects()
 
         // Register the system-wide hotkey for "ring both buds". The handler
         // only fires when the user has configured a combination in Settings;
@@ -145,6 +157,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             .store(in: &cancellables)
     }
 
+    /// Subscribe to system-wide Bluetooth baseband connect events. IOBluetooth
+    /// delivers these on the registering thread's run loop — we register from
+    /// the main run loop here, so `budsBasebandConnected` is invoked on main.
+    private func observeBluetoothReconnects() {
+        budsConnectNotification = IOBluetoothDevice.register(
+            forConnectNotifications: self,
+            selector: #selector(budsBasebandConnected(_:device:))
+        )
+    }
+
+    /// Fires whenever *any* Bluetooth device establishes a baseband connection.
+    /// We filter to our Pixel Buds and, when we're not already healthy, force a
+    /// fresh Maestro session. A baseband (re)connect after a multipoint handoff
+    /// almost always means our RFCOMM control channel went stale, so this is the
+    /// moment to rebuild it — and it un-wedges the case where the backoff loop
+    /// has been failing to re-acquire the channel while the phone held primary.
+    @objc private func budsBasebandConnected(
+        _ notification: IOBluetoothUserNotification,
+        device: IOBluetoothDevice
+    ) {
+        let cod = UInt32(device.classOfDevice)
+        let isBuds = (device.name ?? "").lowercased().contains("pixel buds")
+            && (cod == 0x240404 || cod == 0x244404)
+        guard isBuds else { return }
+        // Only intervene when we're idle or wedged in an error. We must NOT
+        // interrupt an in-progress connect (`.connecting`) — that includes the
+        // very first connect at launch, which races this notification — nor a
+        // healthy `.connected` session (its own stream-drop handling covers
+        // blips). Forcing a reconnect mid-open would cancel the in-flight open
+        // and churn for nothing.
+        switch model.connectionState {
+        case .connecting, .connected:
+            return
+        case .idle, .error:
+            log.info("buds baseband connected while \(String(describing: self.model.connectionState)) — forcing Maestro reconnect")
+            model.forceReconnect()
+        }
+    }
+
     // MARK: - Status item rendering
 
     private func refreshStatusItem() {
@@ -232,6 +283,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         ringItem.isEnabled = model.snapshot?.canRingBuds == true
         menu.addItem(ringItem)
 
+        let reconnectItem = NSMenuItem(
+            title: "Reconnect",
+            action: #selector(menuReconnect),
+            keyEquivalent: ""
+        )
+        reconnectItem.target = self
+        menu.addItem(reconnectItem)
+
         menu.addItem(.separator())
 
         let checkUpdatesItem = NSMenuItem(
@@ -277,6 +336,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func menuRingBuds() {
         guard model.snapshot?.canRingBuds == true else { return }
         model.ringBuds(.both)
+    }
+
+    @objc private func menuReconnect() {
+        model.forceReconnect()
     }
 
     @objc private func menuOpenSettings() {

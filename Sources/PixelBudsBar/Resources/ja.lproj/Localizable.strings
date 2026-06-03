@@ -50,6 +50,7 @@
 "Ring right only" = "右のみ鳴らす";
 "Stop ringing" = "鳴動を停止";
 "Quit" = "終了";
+"Reconnect" = "再接続";
 
 // MARK: - SettingsView — tab names
 "General" = "一般";

@@ -223,6 +223,57 @@ final class BudsViewModel: ObservableObject {
         }
     }
 
+    /// Hard reconnect — reproduces quit+relaunch in-process.
+    ///
+    /// The background reconnect loop in `runLiveSession` retries on a blind
+    /// backoff timer, but it reuses the same in-process IOBluetooth stack on
+    /// every attempt. When multipoint focus shifts to the phone, the buds drop
+    /// our Maestro RFCOMM channel and may refuse a fresh open while the phone
+    /// is primary, so the loop can spin indefinitely against the same wall —
+    /// until now the only escape was quitting and relaunching the app.
+    ///
+    /// This tears the whole session down (cancel the live task, await its full
+    /// exit, close the connection) and starts a brand-new live task, mirroring
+    /// what a relaunch does. Teardown is serialized through `pendingClose` —
+    /// which the fresh `runLiveSession` awaits before reopening — so the old
+    /// adapter's RFCOMM release can't race the new open on the same channelID.
+    ///
+    /// No-op when nothing holds the connection (no UI open and background
+    /// monitoring off); there's nothing to reconnect to in that case.
+    func forceReconnect() {
+        guard consumerCount > 0 else {
+            log.info("forceReconnect: ignored — no active consumer")
+            return
+        }
+        log.info("forceReconnect: tearing down current session and restarting")
+
+        // Capture the live task and connection BEFORE cancelling, so the new
+        // session waits for the old one to fully exit and clean up its adapter.
+        let oldTask = liveTask
+        liveTask?.cancel()
+        liveTask = nil
+        let conn = connection
+        connection = nil
+
+        // Reset per-session error tracking; the fresh session starts clean.
+        consecutiveTransportErrors = 0
+        clearWriteErrorOnReconnect = true
+        connectionState = .connecting
+
+        // Chain onto any teardown already in flight so we never orphan a
+        // half-finished close (which would leak an RFCOMM channel).
+        let priorClose = pendingClose
+        pendingClose = Task {
+            await priorClose?.value
+            _ = await oldTask?.value   // old task fully exits + closes its adapter
+            await conn?.close()
+        }
+
+        liveTask = Task { [weak self] in
+            await self?.runLiveSession()
+        }
+    }
+
     func setAnc(_ state: MaestroPw_AncState) {
         guard let connection else { return }
         let skipRetry = snapshot?.bothInCase ?? false
@@ -739,11 +790,8 @@ final class BudsViewModel: ObservableObject {
         // If either ends or throws, the session is treated as dropped and the
         // outer runLiveSession loop reconnects with exponential backoff.
         //
-        // A third, non-mandatory task polls RuntimeInfo every 30 seconds.
-        // Gen 2 firmware is event-driven for placement (emits on case-close,
-        // not on "bud placed in open case"), so without this poll the charging
-        // indicator and in-case badge can stay stale for minutes. The poll
-        // task is cancelled automatically when the group ends.
+        // A third task is a liveness heartbeat (see below). Whichever task
+        // finishes first ends the session.
         do {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask { [conn] in
@@ -761,17 +809,27 @@ final class BudsViewModel: ObservableObject {
                     }
                 }
                 group.addTask { [conn] in
-                    // Non-throwing: a failed refresh is silent; the mandatory
-                    // streams above will surface any real transport failure.
+                    // Liveness heartbeat. When multipoint focus moves to another
+                    // device (the phone), the RFCOMM link goes half-dead: the
+                    // subscription streams stop delivering but never *end*, so
+                    // without an active probe the session would look "connected"
+                    // forever. A lightweight unary every 15s detects this — if it
+                    // throws (transport dead / write timed out), it ends the task
+                    // group and the outer loop reconnects.
+                    //
+                    // It MUST be a unary, NOT a runtime re-subscribe: the firmware
+                    // permits only one SubscribeRuntimeInfo per channel, so issuing
+                    // a second one terminates the primary runtime stream — which is
+                    // exactly what the old 30s poll did, silently forcing a full
+                    // reconnect every interval. GetSoftwareInfo is cheap, always
+                    // implemented, and round-trips on the live channel.
                     while !Task.isCancelled {
-                        try await Task.sleep(for: .seconds(30))
+                        try await Task.sleep(for: .seconds(15))
                         if Task.isCancelled { return }
-                        if let rt = try? await conn.service.currentRuntimeInfo() {
-                            await MainActor.run { self.applyRuntimeUpdate(rt) }
-                        }
+                        _ = try await conn.service.getSoftwareInfo()
                     }
                 }
-                // Wait for either mandatory stream to finish — session drop.
+                // Wait for any task to finish — session drop or heartbeat failure.
                 try await group.next()
                 group.cancelAll()
             }

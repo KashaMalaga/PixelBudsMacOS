@@ -51,6 +51,9 @@
 "Stop ringing" = "Stop ringing";
 "Quit" = "Quit";
 
+// MARK: - BudsPopoverView — reconnect
+"Reconnect" = "Reconnect";
+
 // MARK: - SettingsView — tab names
 "General" = "General";
 "Controls" = "Controls";

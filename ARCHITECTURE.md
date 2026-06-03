@@ -121,8 +121,8 @@ you click the gear button:
 `runLiveSession()` is a `while !Task.isCancelled` loop. Each iteration:
 
 1. Calls `runOneSession()` — opens the connection, fetches initial
-   settings, subscribes to runtime + settings change streams. Returns
-   when either stream ends (drop).
+   settings, subscribes to runtime + settings change streams, and runs a
+   liveness heartbeat. Returns when any of those tasks finishes (drop).
 2. Tears down the dead connection.
 3. Computes a backoff (1s, 2s, 4s, 8s, 10s cap) and sleeps.
 4. Loops.
@@ -130,6 +130,18 @@ you click the gear button:
 A failure budget (5 attempts) only counts attempts that never published a
 snapshot. Once a session shows real data, the counter resets — a healthy
 session can recover from intermittent drops indefinitely.
+
+**Liveness heartbeat.** Inside `runOneSession` a third task in the stream
+group sends a unary `GetSoftwareInfo` every 15s. If it throws (transport
+dead / write timeout) the task group ends and the session reconnects. This
+exists because of a multipoint failure mode: when audio focus moves to the
+phone, the RFCOMM link goes *half-dead* — the subscription streams stop
+delivering but never **end**, so without an active probe the session would
+look "connected" forever. The heartbeat must be a **unary**, never a
+runtime re-subscribe: the firmware permits only one `SubscribeRuntimeInfo`
+per channel, so a second one terminates the primary runtime stream. An
+earlier "refresh runtime every 30s" poll did exactly that and silently
+forced a full reconnect every 30 seconds (see the catalog at the bottom).
 
 ### 3. Snapshot pattern
 
@@ -148,6 +160,53 @@ flagged the whole connection as `.error` and the only way out was to
 close and reopen the app. Write errors now live in
 `lastWriteError: String?`, dismissible from the UI.
 
+### 4. Resilience & recovery
+
+The reconnect loop above handles ordinary drops. These mechanisms handle
+the nastier failure modes (mostly multipoint: the buds are connected to
+both the Mac and a phone, and focus moves between them):
+
+- **Manual reconnect — `BudsViewModel.forceReconnect()`.** Reproduces a
+  quit-and-relaunch in-process: cancels the live task, awaits its full
+  exit, closes the connection, then starts a fresh live task. Teardown is
+  chained through `pendingClose` (which the new `runLiveSession` awaits
+  before reopening) so the old RFCOMM channel's release can't race the new
+  open on the same channel ID. Exposed in the UI as a Reconnect button
+  (arrow.clockwise) in the popover footer, in the error view, and in the
+  right-click menu. No-op when nothing holds the connection (background
+  monitoring off **and** popover closed).
+
+- **Automatic reconnect on baseband re-connect.** `AppDelegate` registers
+  `IOBluetoothDevice.register(forConnectNotifications:)`. When the buds
+  re-establish their ACL link (e.g. phone hands focus back) we call
+  `forceReconnect()` — but only when state is `.idle` or `.error`. We must
+  not interrupt an in-progress `.connecting` (that includes the first
+  connect at launch, which races this notification) or a healthy
+  `.connected` session.
+
+- **Cancellation-safe transport.** Both `RFCOMMTransportAdapter.open()`
+  and `.write()` wait on `CheckedContinuation`s that IOBluetooth only
+  resumes via a delegate callback (open-complete) or a blocking `writeSync`
+  return. A plain checked continuation does **not** resume on task
+  cancellation, so a cancelled open/write used to leave a child task
+  suspended forever — and `withThrowingTaskGroup` won't return until all
+  children finish, deadlocking teardown. Both paths now use
+  `withTaskCancellationHandler` plus a lock-guarded resume (the open
+  continuation directly, writes via `WriteContinuationBox`). This mirrors
+  the pattern `RpcConnection.unary` already used for its waiters.
+
+- **Write timeout.** `writeSync` is a blocking IOBluetooth call that has
+  been observed to hang for 60+ seconds on a half-dead link. `write()`
+  races the actual write against a 5s timeout; on timeout it closes the
+  channel (which aborts the stuck `writeSync`) and throws, so the session
+  tears down and reconnects on a fresh channel instead of hanging.
+
+- **SDP refresh on miss.** Right after a device (re)connects, the Maestro
+  SDP service record can be momentarily absent. `open()` forces a fresh
+  `performSDPQuery` and polls ~3s before failing, so a transient miss
+  doesn't burn a connect attempt. GFPS opts out (`refreshSDPIfMissing:
+  false`) — Ring is optional and should fail fast.
+
 ## State diagram
 
 ```
@@ -159,15 +218,18 @@ close and reopen the app. Write errors now live in
                        success│                   │failure (budget!)
                               ▼                   ▼
                         .connected            .error(msg)
-                              │
-                       stream drops
-                              │
-                              ▼
-                          backoff + retry
+                              │                   │
+                stream drops /│                   │ forceReconnect() /
+                heartbeat fail│                   │ baseband re-connect
+                              ▼                   │
+                          backoff + retry ◄───────┘
                               │
                               ▼
                        (loop until cancelled or budget exhausted)
 ```
+
+`forceReconnect()` (manual button, or automatic on baseband re-connect)
+tears the current session down and re-enters `.connecting` from any state.
 
 ## Module boundaries (Swift Package targets)
 
@@ -221,6 +283,16 @@ point in `runLiveSession` / `runOneSession`. When the user closes the
 popover and the consumer count drops to zero, the live task is cancelled
 and the next checkpoint exits cleanly.
 
+Cancellation must also reach the leaf continuations that wrap IOBluetooth
+callbacks — `RFCOMMTransportAdapter.open()` and `.write()`. Those wait on
+`CheckedContinuation`s that only resume from a delegate or a blocking
+`writeSync`, which cancellation does not interrupt on its own. Each is
+wrapped in `withTaskCancellationHandler` with a lock-guarded single resume
+(`openLock` / `WriteContinuationBox`), and `RpcConnection.unary` does the
+same for its RPC waiters. Skipping this deadlocks teardown: a parent
+`withThrowingTaskGroup` never returns while a child continuation is still
+suspended.
+
 ## Things that have bitten us before
 
 Cataloging these here so the next maintainer (or AI assistant) can find
@@ -246,3 +318,31 @@ them quickly:
 - **Menu-bar icon rendered huge.** `NSImage(contentsOf:)` reports the
   PNG's native size. Set `img.size = NSSize(width: 18, height: 18)`
   explicitly before assigning.
+- **Self-inflicted reconnect every 30 seconds.** A "refresh runtime every
+  30s" poll called `currentRuntimeInfo()`, which opens a *second*
+  `SubscribeRuntimeInfo` stream. The firmware allows only one runtime
+  subscription per channel, so the poll terminated the primary stream
+  ~260ms later, which the session driver saw as a drop and fully
+  reconnected — re-resolving the channel and re-reading all settings, twice
+  a minute, forever. Replaced with a unary `GetSoftwareInfo` heartbeat that
+  never touches the runtime subscription. **Never refresh runtime by
+  re-subscribing while the main stream is live.**
+- **`writeSync` hangs for 60+ seconds on a half-dead link.** After a
+  multipoint handoff to the phone, the channel still reports "open"
+  (`rfcommChannelOpenComplete: ok`) but the first `writeSync` blocks until
+  IOBluetooth's own internal timeout (~75s observed). The 0.5s
+  channel-resolution timeout and 15s connect timeout couldn't cancel it
+  because the write continuation wasn't cancellation-aware. Fix: a 5s write
+  timeout that closes the channel, plus cancellation-aware
+  open/write continuations.
+- **Teardown deadlock from a leaked continuation.** Cancelling a session
+  mid-open left `RFCOMMTransportAdapter.open()`'s checked continuation
+  suspended; `withThrowingTaskGroup` then blocked forever waiting on that
+  child, so `forceReconnect`/`releaseConnection` hung at `await
+  pendingClose`. Any `CheckedContinuation` that's resumed by an external
+  callback (delegate, dispatch-queue work) MUST be wrapped in
+  `withTaskCancellationHandler` with a lock-guarded single resume.
+- **Multipoint "half-dead" link looks connected.** When focus moves to the
+  phone, subscription streams stop delivering but never `finish`, so the
+  session has no signal that it's dead. The 15s heartbeat is what detects
+  it; without an active probe the UI sits on a stale "connected" forever.

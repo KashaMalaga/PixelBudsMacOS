@@ -44,6 +44,7 @@ ring-my-buds.
 - Live battery for both buds + the case, with charging (⚡) and in-case indicators.
 - Noise Control toggle: **Off / Active / Aware** on Gen 1; adds **Adaptive** on Gen 2.
 - "Find my buds" — rings left, right, both, or stops ringing.
+- **Reconnect** button — forces a fresh connection if the link gets stuck (see Reliability below).
 - Audio codec label (AAC shown when streaming over A2DP).
 
 **Settings window** (gear icon):
@@ -59,6 +60,23 @@ ring-my-buds.
 
 **Background monitoring** — optional; keeps the connection alive between popover sessions
 and sends a macOS notification when a bud or case drops below 15 %.
+
+## Reliability & multipoint
+
+Pixel Buds Pro support multipoint (connected to your Mac and, say, your phone at the same
+time). When audio focus moves to the other device, the buds quietly drop the Mac's control
+link — and historically the app could get stuck "Connecting…" until you quit and relaunched.
+The app now recovers on its own:
+
+- **Liveness heartbeat** — a lightweight check every 15s notices a dead link (instead of
+  sitting on a stale "Connected") and reconnects.
+- **Automatic reconnect** when the buds re-establish their Bluetooth link to the Mac (e.g.
+  your phone hands focus back).
+- **Manual Reconnect button** in the popover (and the right-click menu) for the rare case
+  you want to force it immediately — no more quit-and-relaunch.
+
+Under the hood the transport now bounds a stuck Bluetooth write (5s) and recovers instead of
+hanging. See [`ARCHITECTURE.md`](ARCHITECTURE.md#connection-lifecycle) for the full design.
 
 ## Requirements
 

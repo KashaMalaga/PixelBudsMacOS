@@ -50,6 +50,7 @@
 "Ring right only" = "Solo destro";
 "Stop ringing" = "Interrompi suono";
 "Quit" = "Esci";
+"Reconnect" = "Riconnetti";
 
 // MARK: - SettingsView — tab names
 "General" = "Generali";

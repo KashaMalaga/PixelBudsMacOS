@@ -16,6 +16,13 @@ final class BudsConnection {
             case .noPairedBuds:
                 return String(localized: "No paired Pixel Buds Pro found")
             case .rfcommOpen(let e):
+                // A missing SDP record (even after a refresh) usually means the
+                // buds aren't reachable for control right now — commonly because
+                // multipoint focus is on another device (your phone). Don't
+                // misattribute that to Chrome holding the channel.
+                if let rf = e as? RFCOMMOpenError, case .noServiceRecord = rf {
+                    return String(localized: "Couldn't reach the buds for control — they may be focused on another device (e.g. your phone). They should come back on their own; use Reconnect to retry now.")
+                }
                 return String(localized: "RFCOMM channel could not be opened — \(String(describing: e)). Another app (e.g. mypixelbuds.google.com in Chrome) may be holding the channel.")
             case .channelResolution(let e):
                 return String(localized: "Maestro channel resolution failed: \(String(describing: e))")

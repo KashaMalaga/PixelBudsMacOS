@@ -50,6 +50,7 @@
 "Ring right only" = "Nur rechts klingeln";
 "Stop ringing" = "Klingeln stoppen";
 "Quit" = "Beenden";
+"Reconnect" = "Erneut verbinden";
 
 // MARK: - SettingsView — tab names
 "General" = "Allgemein";

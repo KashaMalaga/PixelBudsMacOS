@@ -86,6 +86,31 @@ These cost us hours each:
 - **GFPS channel can drop alone.** Maestro keeps working but the
   RFCOMM-level close fires `rfcommChannelClosed` on the GFPS adapter.
   We observe `GFPSChannel.whenClosed()` and hide the Ring control.
+- **Never refresh runtime by re-subscribing.** The firmware allows only
+  **one** `SubscribeRuntimeInfo` per channel; opening a second one (e.g.
+  via `currentRuntimeInfo()`, which is subscribe-take-one) terminates the
+  primary runtime stream and the session driver treats it as a drop. A
+  retired 30s "refresh" poll did this and forced a reconnect twice a
+  minute. The in-session liveness check is a unary `GetSoftwareInfo`
+  heartbeat for this reason. `currentRuntimeInfo()` is fine for the *one*
+  initial read (before the main subscription is open), not for polling.
+- **`writeSync` can block for over a minute.** On a multipoint half-dead
+  link the channel reports "open" but `writeSync` hangs until IOBluetooth's
+  internal timeout. `RFCOMMTransportAdapter.write()` races a 5s timeout that
+  closes the channel to abort it. Don't remove that timeout, and keep
+  writes cheap.
+- **Cancellation-aware continuations.** Any `CheckedContinuation` resumed
+  by an IOBluetooth delegate or dispatch-queue work (open-complete,
+  `writeSync`) must use `withTaskCancellationHandler` + a lock-guarded
+  single resume (`openLock`, `WriteContinuationBox`). Otherwise a cancelled
+  open/write leaves the child suspended and the enclosing
+  `withThrowingTaskGroup` never returns — deadlocking teardown /
+  `forceReconnect`. `RpcConnection.unary` is the reference pattern.
+- **Multipoint half-dead link.** When focus moves to the phone the streams
+  go silent without ending, so the session looks "connected." The 15s
+  heartbeat in `runOneSession` is the only thing that detects it; the
+  baseband-connect notification in `AppDelegate` is what pulls it back when
+  the buds return.
 - **SwiftPM-generated `.bundle` doesn't ad-hoc sign.** Don't try to ship
   resources via SwiftPM into the `.app` directly — copy flat files from
   `Sources/PixelBudsBar/Resources/` into `Contents/Resources/` in the
@@ -145,6 +170,17 @@ Chrome).
 - **The reconnect budget logic** in `runLiveSession`. It's tuned to be
   patient on real drops and to give up quickly when the buds simply
   aren't there.
+- **The liveness heartbeat** in `runOneSession`. It must stay a unary
+  (`GetSoftwareInfo`); turning it back into a runtime re-subscribe
+  reintroduces the every-30s self-reconnect bug.
+- **The transport cancellation handlers + write timeout** in
+  `RFCOMMTransportAdapter`. They're what make `forceReconnect`/teardown
+  not deadlock and what bounds a wedged `writeSync`. See
+  ARCHITECTURE.md → "Resilience & recovery".
+- **The baseband-connect guard** in `AppDelegate.budsBasebandConnected`.
+  It deliberately fires `forceReconnect()` only from `.idle`/`.error`,
+  never `.connecting`/`.connected` — interrupting the first connect at
+  launch was a real regression.
 - **The `BudsConnection.openImpl` ordering.** Maestro is opened first
   (mandatory) then GFPS (best-effort). Reversing this would block the
   whole popover on a GFPS open that might never succeed.
