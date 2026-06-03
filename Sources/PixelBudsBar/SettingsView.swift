@@ -162,7 +162,7 @@ struct SettingsView: View {
             Section("Controls") {
                 toggleRow(
                     title: String(localized: "Conversation detection"),
-                    subtitle: String(localized: "Switches to Aware mode and pauses media when you start talking."),
+                    subtitle: String(localized: "Switches to Transparency mode and pauses media when you start talking."),
                     value: model.snapshot?.conversationDetection,
                     onChange: model.setConversationDetection
                 )
@@ -214,7 +214,7 @@ struct SettingsView: View {
                 if let loop = model.snapshot?.ancGestureLoop {
                     Toggle(String(localized: "Cancellation", comment: "ANC loop mode"), isOn: ancLoopBinding(\.active, current: loop))
                     Toggle(String(localized: "Off", comment: "ANC loop mode"), isOn: ancLoopBinding(\.off, current: loop))
-                    Toggle(String(localized: "Aware (transparency)", comment: "ANC loop mode"), isOn: ancLoopBinding(\.aware, current: loop))
+                    Toggle(String(localized: "Transparency", comment: "ANC loop mode"), isOn: ancLoopBinding(\.aware, current: loop))
                     if model.snapshot?.supportsAdaptiveAnc == true {
                         Toggle(String(localized: "Adaptive", comment: "ANC loop mode"), isOn: ancLoopBinding(\.adaptive, current: loop))
                     }

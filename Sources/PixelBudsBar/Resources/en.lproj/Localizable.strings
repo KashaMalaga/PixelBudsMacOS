@@ -37,8 +37,8 @@
 // MARK: - BudsPopoverView — ANC / noise control
 "Noise Control" = "Noise Control";
 "Off" = "Off";
-"Active" = "Active";
-"Aware" = "Aware";
+"ANC" = "ANC";
+"Transparency" = "Transparency";
 "Adaptive" = "Adaptive";
 
 // MARK: - BudsPopoverView — in-case banner
@@ -76,7 +76,7 @@
 
 // MARK: - SettingsView — Controls tab
 "Conversation detection" = "Conversation detection";
-"Switches to Aware mode and pauses media when you start talking." = "Switches to Aware mode and pauses media when you start talking.";
+"Switches to Transparency mode and pauses media when you start talking." = "Switches to Transparency mode and pauses media when you start talking.";
 "In-ear detection" = "In-ear detection";
 "Pause media when an earbud is removed." = "Pause media when an earbud is removed.";
 "Multipoint" = "Multipoint";
@@ -96,7 +96,6 @@
 
 // MARK: - SettingsView — ANC cycle
 "Cancellation" = "Cancellation";
-"Aware (transparency)" = "Aware (transparency)";
 "Modes the long-press cycles through when hold gesture is set to Noise control." = "Modes the long-press cycles through when hold gesture is set to Noise control.";
 "Loading ANC cycle…" = "Loading ANC cycle…";
 

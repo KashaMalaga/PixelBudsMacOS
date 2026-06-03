@@ -37,8 +37,8 @@
 // MARK: - BudsPopoverView — ANC / noise control
 "Noise Control" = "ノイズコントロール";
 "Off" = "オフ";
-"Active" = "アクティブ";
-"Aware" = "外部音取り込み";
+"ANC" = "ANC";
+"Transparency" = "外部音取り込み";
 "Adaptive" = "アダプティブ";
 
 // MARK: - BudsPopoverView — in-case banner
@@ -76,7 +76,7 @@
 
 // MARK: - SettingsView — Controls tab
 "Conversation detection" = "会話検出";
-"Switches to Aware mode and pauses media when you start talking." = "話し始めると外部音取り込みモードに切り替わり、メディアを一時停止します。";
+"Switches to Transparency mode and pauses media when you start talking." = "話し始めると外部音取り込みモードに切り替わり、メディアを一時停止します。";
 "In-ear detection" = "装着検出";
 "Pause media when an earbud is removed." = "イヤバッドを外すとメディアを一時停止します。";
 "Multipoint" = "マルチポイント";
@@ -96,7 +96,6 @@
 
 // MARK: - SettingsView — ANC cycle
 "Cancellation" = "ノイズキャンセリング";
-"Aware (transparency)" = "外部音取り込み";
 "Modes the long-press cycles through when hold gesture is set to Noise control." = "長押しジェスチャーがノイズコントロールに設定されているときに切り替わるモード。";
 "Loading ANC cycle…" = "ANCサイクルを読み込み中…";
 

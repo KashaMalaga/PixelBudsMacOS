@@ -155,8 +155,8 @@ struct BudsPopoverView: View {
             Text("Noise Control", comment: "ANC section title").font(.subheadline)
             Picker("", selection: ancBinding(snap)) {
                 Text("Off", comment: "ANC mode off").tag(MaestroPw_AncState.off)
-                Text("Active", comment: "ANC mode active").tag(MaestroPw_AncState.active)
-                Text("Aware", comment: "ANC mode aware/transparency").tag(MaestroPw_AncState.aware)
+                Text("ANC", comment: "ANC mode active — noise cancellation").tag(MaestroPw_AncState.active)
+                Text("Transparency", comment: "ANC mode aware/transparency").tag(MaestroPw_AncState.aware)
                 if snap.supportsAdaptiveAnc {
                     Text("Adaptive", comment: "ANC mode adaptive").tag(MaestroPw_AncState.adaptive)
                 }
